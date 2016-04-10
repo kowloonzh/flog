@@ -128,7 +128,7 @@ func (this *Flog ) SetAsync(capacity int64) *Flog {
 	//初始化chan
 	this.msgChan = make(chan *LogMsg, capacity)
 	this.signalChan = make(chan string, 1)
-	//阻塞goroutine
+	//异步执行日志收集
 	this.wg.Add(1)
 	go this.collect()
 	return this
