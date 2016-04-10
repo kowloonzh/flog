@@ -35,10 +35,11 @@ const (
 
 //日志结构体
 type LogMsg struct {
-	logTime  time.Time
-	level    int    //日志等级
-	category string //日志分类
-	message  string //日志内容
+	logTime   time.Time
+	level     int    //日志等级
+	category  string //日志分类
+	message   string //日志内容
+	formatMsg string //格式化之后的内容
 }
 
 /**
@@ -46,21 +47,25 @@ type LogMsg struct {
  */
 type Flog struct {
 	mu              sync.Mutex
-	Level           int    //日志等级
-	LogMode         int    //日志文件名模式
-						   //LogFlag         int    //日志内容模式
-	LogPath         string //日志文件的根目录
-	DateFormat      string //文件按格式化
-	ArchiveName     string //归档目录 default:archive
-	FileName        string //文件名
-	LogFunCallDepth int    //获取调用函数的层级
-						   //日志logger相关
-	logerMap        map[string]*log.Logger
-	fhMap           map[string]*os.File
-						   //异步写相关
-	msgChan         chan *LogMsg
-	signalChan      chan string
-	async           bool
+	Level           int                    //日志等级
+	LogMode         int                    //日志文件名模式
+										   //LogFlag         int    //日志内容模式
+	LogPath         string                 //日志文件的根目录
+	FileName        string                 //文件名
+	DateFormat      string                 //文件按格式化
+	ArchiveName     string                 //归档目录 default:archive
+	LogFunCallDepth int                    //获取调用函数的层级
+										   /**
+											* 日志logger相关
+											*/
+	logerMap        map[string]*log.Logger //filename:log.Logger
+	fhMap           map[string]*os.File    //filename:os.File
+										   /**
+											* 异步写相关
+											*/
+	msgChan         chan *LogMsg           //日志chan
+	signalChan      chan string            //信号chan 包括flush 和 close
+	async           bool                   //是否开启异步
 	wg              sync.WaitGroup
 }
 
@@ -114,11 +119,11 @@ func (this *Flog ) init() {
  * @return *Flog
  *
  */
-func (this *Flog ) SetAsync(capacity int) *Flog {
+func (this *Flog ) SetAsync(capacity int64) *Flog {
 	this.async = true
 	if capacity <= 0 {
-		capacity = 1 << 16  //65536
-		fmt.Println(capacity)
+		capacity = 1 << 20  //1048576
+		//fmt.Println(capacity)
 	}
 	//初始化chan
 	this.msgChan = make(chan *LogMsg, capacity)
@@ -222,13 +227,14 @@ func (this *Flog ) log(category string, level int, v ...interface{}) {
 		category:category,
 		message:fmt.Sprintln(v...),
 	}
+	//格式化message
+	msg.formatMsg = this.formatMessage(msg)
 	//如果是异步,先写入msgChan
 	if this.async {
 		this.msgChan <- msg
 	}else {
 		this.writeMsg(msg)
 	}
-	//logger.Output(3, this.formatMessage(msg))
 }
 
 func (this *Flog ) writeMsg(msg *LogMsg) {
@@ -239,7 +245,7 @@ func (this *Flog ) writeMsg(msg *LogMsg) {
 		fmt.Println("Error: fail to get logger by filename", filename)
 		return
 	}
-	logger.Print(this.formatMessage(msg))
+	logger.Print(msg.formatMsg)
 }
 
 //格式化消息 日期 文件位置 [等级] [类别] 消息  @todo 定制格式化输出
