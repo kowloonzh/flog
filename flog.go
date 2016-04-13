@@ -9,6 +9,7 @@ import (
 	"path"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -22,7 +23,7 @@ var levels = map[int]string{
 	LEVEL_DEBUG:"debug",
 	LEVEL_INFO:"info",
 	LEVEL_WARNING:"warning",
-	LEVEL_ERROR:"erro",
+	LEVEL_ERROR:"error",
 }
 
 //文件名模式
@@ -256,7 +257,8 @@ func (this *Flog ) formatMessage(msg *LogMsg) string {
 		line = 0
 	}
 	fileMsg := file + ":" + strconv.FormatInt(int64(line), 10)
-	return fmt.Sprintf("%s %s [%s][%s]\n%s\n", msg.logTime.Format("2006-01-02 15:04:05"), fileMsg, this.getLevelName(msg.level), msg.category, msg.message)
+	levelName := strings.ToUpper(this.getLevelName(msg.level))
+	return fmt.Sprintf("%s %s %s %s %s", msg.logTime.Format("2006-01-02 15:04:05"), fileMsg, levelName, msg.category, msg.message)
 }
 
 //根据等级获取等级的label

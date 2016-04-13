@@ -41,7 +41,7 @@ func TestDefault(t *testing.T) {
 			lineNum++
 		}
 	}
-	var expected = (LEVEL_ERROR + 1) * 2
+	var expected = LEVEL_ERROR + 1
 	if lineNum != expected {
 		t.Fatal(lineNum, "not " + strconv.Itoa(expected) + " lines")
 	}
@@ -72,7 +72,7 @@ func TestLevel(t *testing.T) {
 			lineNum++
 		}
 	}
-	var expected = 2
+	var expected = 1
 	if lineNum != expected {
 		t.Fatal(lineNum, "not " + strconv.Itoa(expected) + " lines")
 	}
