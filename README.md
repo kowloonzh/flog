@@ -88,7 +88,7 @@ func main()  {
 1. LOGMODE_FILE eg. app.log
 2. LOGMODE_FILE_LEVEL eg. app.log.debug
 3. LOGMODE_CATE eg. test test为下例中Debug的第一个参数
-4. LOGMODE_CATE_LEVEL eg. test.debug
+4. LOGMODE_CATE_LEVEL eg. test.debug  
 
 ```
 ....
