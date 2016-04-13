@@ -110,7 +110,7 @@ func TestFileName(t *testing.T) {
 //测试日期格式化
 func TestDateFormat(t *testing.T) {
 	loger := New()
-	loger.DateFormat = "20060102"
+	loger.DateFormat = "Ymd"
 	loger.Debug("d", "debug_message")
 	filename := path.Join(loger.LogPath, loger.FileName+"."+time.Now().Format("20060102"))
 	_,err := os.Open(filename)
@@ -125,7 +125,6 @@ func TestDateFormat(t *testing.T) {
 func TestLogModeFileLevel(t *testing.T) {
 	loger := New()
 	loger.LogMode = LOGMODE_FILE_LEVEL
-	//loger.DateFormat = "20060102"
 	loger.Debug("d", "debug_message")
 	filename := path.Join(loger.LogPath, loger.FileName+"."+"debug")
 	_,err := os.Open(filename)
@@ -136,11 +135,10 @@ func TestLogModeFileLevel(t *testing.T) {
 	//os.RemoveAll(loger.LogPath)
 }
 
-//测试文件名模式为file.level
+//测试文件名模式为cate
 func TestLogModeCate(t *testing.T) {
 	loger := New()
 	loger.LogMode = LOGMODE_CATE
-	//loger.DateFormat = "20060102"
 	loger.Debug("d", "debug_message")
 	filename := path.Join(loger.LogPath, "d")
 	_,err := os.Open(filename)
@@ -151,11 +149,10 @@ func TestLogModeCate(t *testing.T) {
 	//os.RemoveAll(loger.LogPath)
 }
 
-//测试文件名模式为file.level
+//测试文件名模式为cate.level
 func TestLogModeCateLevel(t *testing.T) {
 	loger := New()
 	loger.LogMode = LOGMODE_CATE_LEVEL
-	//loger.DateFormat = "20060102"
 	loger.Debug("d", "debug_message")
 	filename := path.Join(loger.LogPath, "d.debug")
 	_,err := os.Open(filename)

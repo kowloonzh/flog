@@ -43,6 +43,37 @@ type LogMsg struct {
 	formatMsg string //格式化之后的内容
 }
 
+//用来格式化时间
+var TimeFormatMap = map[string]string{
+	"Y":"2006",
+	"m":"01",
+	"d":"02",
+	"H":"15",
+	"i":"04",
+	"s":"05",
+}
+
+/**
+ * 类似php的date()函数
+ *
+ * @param
+ * @return
+ *
+ */
+func Date(format string,timestamp ...int64)  string{
+	newFormat:= format
+	for k,v := range TimeFormatMap{
+		newFormat = strings.Replace(newFormat,k,v,1)
+	}
+	var tm time.Time
+	if len(timestamp)>0{
+		tm = time.Unix(timestamp[0],0)
+	}else{
+		tm = time.Now()
+	}
+	return tm.Format(newFormat)
+}
+
 /**
  * 文件日志
  */
@@ -53,7 +84,7 @@ type Flog struct {
 										   //LogFlag         int    //日志内容模式
 	LogPath         string                 //日志文件的根目录
 	FileName        string                 //文件名
-	DateFormat      string                 //文件按格式化
+	DateFormat      string                 //文件按格式化 YmdHis
 	ArchiveName     string                 //归档目录 default:archive
 	LogFunCallDepth int                    //获取调用函数的层级
 										   /**
@@ -283,7 +314,8 @@ func (this *Flog ) getFilename(msg *LogMsg) string {
 		filename = this.FileName
 	}
 	if len(this.DateFormat) > 0 {
-		nowDate := time.Now().Format(this.DateFormat)
+		nowDate := Date(this.DateFormat)
+		//nowDate := time.Now().Format(this.DateFormat)
 		filename = filename + "." + nowDate
 	}
 	return filename

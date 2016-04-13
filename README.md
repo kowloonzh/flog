@@ -69,6 +69,7 @@ func main()  {
 ```
 
 ### 设置日志文件时间后缀
+时间后缀支持 YmdHis ,分别表示年月日时分秒,eg. Y-m-d, Ymd, YmdH, etc...
 ```
 ....
 func main()  {
@@ -76,7 +77,7 @@ func main()  {
     loger.FileName = "app.log"
 
     //设置时间格式之后,产生的日志文件后带上时间后缀,eg. app.log.20160410
-    loger.DateFormat = "20060102"
+    loger.DateFormat = "Ymd"
 
 	loger.Debug("test","debug message")
 
@@ -95,7 +96,7 @@ func main()  {
 ....
 func main()  {
 	loger := flog.New("/data/logs")
-    loger.DateFormat = "20060102"
+    loger.DateFormat = "Ymd"
 
     //设置文件名模式为cate+level,最后生成日志文件名 test.debug.20160410
     loger.LogMode = flog.LOGMODE_CATE_LEVEL
