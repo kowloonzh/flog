@@ -34,6 +34,15 @@ const (
 	LOGMODE_CATE_LEVEL        //以分类+level做文件名
 )
 
+//输出格式
+const (
+	LF_DATETIME = 1 << iota            //输出日期
+	LF_SHORTFILE                //输出文件名+行号
+	LF_LONGFILE                    //输出文件绝对路径+行号
+	LF_CATE                        //输出分类
+	LF_LEVEL                    //输出等级
+)
+
 //日志结构体
 type LogMsg struct {
 	logTime   time.Time
@@ -60,15 +69,15 @@ var TimeFormatMap = map[string]string{
  * @return
  *
  */
-func Date(format string,timestamp ...int64)  string{
-	newFormat:= format
-	for k,v := range TimeFormatMap{
-		newFormat = strings.Replace(newFormat,k,v,1)
+func Date(format string, timestamp ...int64) string {
+	newFormat := format
+	for k, v := range TimeFormatMap {
+		newFormat = strings.Replace(newFormat, k, v, 1)
 	}
 	var tm time.Time
-	if len(timestamp)>0{
-		tm = time.Unix(timestamp[0],0)
-	}else{
+	if len(timestamp) > 0 {
+		tm = time.Unix(timestamp[0], 0)
+	}else {
 		tm = time.Now()
 	}
 	return tm.Format(newFormat)
@@ -85,6 +94,8 @@ type Flog struct {
 	LogPath         string                 //日志文件的根目录
 	FileName        string                 //文件名
 	DateFormat      string                 //文件按格式化 YmdHis
+	LogFlags        []int                  //日志输出的格式以及顺序
+	LogFlagSeparator string 				//日志输出的分隔符
 	ArchiveName     string                 //归档目录 default:archive
 	LogFunCallDepth int                    //获取调用函数的层级
 										   /**
@@ -141,6 +152,10 @@ func (this *Flog ) init() {
 
 	if this.LogFunCallDepth == 0 {
 		this.LogFunCallDepth = 3
+	}
+
+	if len(this.LogFlags) == 0 {
+		this.LogFlags = []int{LF_DATETIME, LF_LONGFILE, LF_CATE, LF_LEVEL}
 	}
 }
 
@@ -280,16 +295,43 @@ func (this *Flog ) writeMsg(msg *LogMsg) {
 	logger.Print(msg.formatMsg)
 }
 
-//格式化消息 日期 文件位置 [等级] [类别] 消息  @todo 定制格式化输出
+//格式化消息 日期 文件位置 等级 类别 消息
 func (this *Flog ) formatMessage(msg *LogMsg) string {
 	_, file, line, ok := runtime.Caller(this.LogFunCallDepth)
 	if !ok {
 		file = "???"
 		line = 0
 	}
-	fileMsg := file + ":" + strconv.FormatInt(int64(line), 10)
-	levelName := strings.ToUpper(this.getLevelName(msg.level))
-	return fmt.Sprintf("%s %s %s %s %s", msg.logTime.Format("2006-01-02 15:04:05"), fileMsg, levelName, msg.category, msg.message)
+	formatStr := make([]interface{},0)
+	for _,flag := range this.LogFlags{
+		switch flag {
+		case LF_DATETIME:
+			formatStr = append(formatStr,msg.logTime.Format("2006-01-02 15:04:05"))
+		case LF_LEVEL:
+			formatStr = append(formatStr,strings.ToUpper(this.getLevelName(msg.level)))
+		case LF_CATE:
+			formatStr = append(formatStr,msg.category)
+		case LF_LONGFILE:
+			formatStr = append(formatStr,file + ":"+strconv.Itoa(line))
+		case LF_SHORTFILE:
+			short := file
+			for i := len(file) - 1; i > 0; i-- {
+				if file[i] == '/' {
+					short = file[i+1:]
+					break
+				}
+			}
+			formatStr = append(formatStr,short + ":"+strconv.Itoa(line))
+		}
+	}
+	formatStr = append(formatStr,msg.message)
+
+	if len(this.LogFlagSeparator) == 0{
+		this.LogFlagSeparator = " "
+	}
+
+	s := strings.TrimPrefix(strings.Repeat(this.LogFlagSeparator+"%s",len(formatStr)),this.LogFlagSeparator)
+	return fmt.Sprintf(s, formatStr...)
 }
 
 //根据等级获取等级的label

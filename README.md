@@ -138,4 +138,32 @@ func main()  {
 }
 ```
 
+### 设置日志内容的格式以及顺序以及分隔符
+日志内容的格式 LogFlags 数组里面的元素可以自定义以下几种
+
+-	LF_DATETIME   输出日期 eg. 2016-04-06 03:05:01
+-	LF_SHORTFILE  输出文件名和行号 eg. test.go:22
+-	LF_LONGFILE   输出文件绝对路径和行号  eg. /tmp/test.go:22
+-	LF_CATE       输出分类 eg. test
+-	LF_LEVEL      输出等级 eg. DEBUG
+
+LogFlags 默认为 [LF_DATETIME, LF_LONGFILE, LF_CATE, LF_LEVEL]
+
+日志内容分隔符 LogFlagSeparator 默认为空格,可以自定义其他字串,eg. "|"
+
+```
+....
+func main()  {
+	loger := flog.New("/data/logs")
+
+    //设置日志内容以及顺序为 等级 分类 时间
+	loger.LogFlags = []int{LF_LEVEL,LF_CATE,LF_DATETIME}
+	//设置日志内容的分隔符为 " | "
+    loger.LogFlagSeparator = " | "
+
+    loger.Debug("d", "debug_message")
+
+}
+```
+
 ### @todo 归档和日志切割

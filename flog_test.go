@@ -163,6 +163,67 @@ func TestLogModeCateLevel(t *testing.T) {
 	//os.RemoveAll(loger.LogPath)
 }
 
+//测试自定义日志输出的格式和顺序
+func TestLogFlags(t *testing.T) {
+	loger := New()
+	loger.LogFlags = []int{LF_LEVEL,LF_CATE,LF_DATETIME}
+	loger.Debug("d", "debug_message")
+	filename := path.Join(loger.LogPath, loger.FileName)
+	fh,err := os.Open(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := bufio.NewReader(fh)
+	line,_,err := b.ReadLine()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(filename)
+
+	//按分隔符分隔line
+	messages := strings.Split(string(line),loger.LogFlagSeparator)
+	if len(messages) < 4 {
+		t.Fatal("Message must have four part at least.")
+	}
+
+	if messages[0]!= "DEBUG" || messages[1] != "d" ||  messages[2]!= Date("Y-m-d") {
+		t.Fatal("Message does not show as expected.",string(line))
+	}
+	//os.RemoveAll(loger.LogPath)
+}
+
+//测试自定义日志输出的分隔符
+func TestLogFlagSeparator(t *testing.T) {
+	loger := New()
+	loger.LogFlags = []int{LF_LEVEL,LF_CATE,LF_DATETIME}
+	loger.LogFlagSeparator = " | "
+	loger.Debug("d", "debug_message")
+	filename := path.Join(loger.LogPath, loger.FileName)
+	fh,err := os.Open(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := bufio.NewReader(fh)
+	line,_,err := b.ReadLine()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(filename)
+	//按分隔符分隔line
+	messages := strings.Split(string(line)," | ")
+	if len(messages) < 4 {
+		t.Fatal("Message must have four part at least.")
+	}
+
+	if messages[0]!= "DEBUG" || messages[1] != "d" ||  !strings.Contains(messages[2],Date("Y-m-d")) {
+		t.Fatal("Message does not show as expected.",string(line))
+	}
+
+
+	//os.RemoveAll(loger.LogPath)
+}
+
 //测试logFunCallDepth参数
 func TestLogFunCallDepth(t *testing.T)  {
 	loger := New()
