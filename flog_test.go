@@ -45,7 +45,8 @@ func TestDefault(t *testing.T) {
 	if lineNum != expected {
 		t.Fatal(lineNum, "not " + strconv.Itoa(expected) + " lines")
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试等级
@@ -76,7 +77,8 @@ func TestLevel(t *testing.T) {
 	if lineNum != expected {
 		t.Fatal(lineNum, "not " + strconv.Itoa(expected) + " lines")
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试等级
@@ -101,7 +103,8 @@ func TestFileName(t *testing.T) {
 	if err != nil && os.IsNotExist(err){
 		t.Fatal(err)
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试日期格式化
@@ -114,7 +117,8 @@ func TestDateFormat(t *testing.T) {
 	if err != nil && os.IsNotExist(err){
 		t.Fatal(err)
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试文件名模式为file.level
@@ -128,7 +132,8 @@ func TestLogModeFileLevel(t *testing.T) {
 	if err != nil && os.IsNotExist(err){
 		t.Fatal(err)
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试文件名模式为file.level
@@ -142,7 +147,8 @@ func TestLogModeCate(t *testing.T) {
 	if err != nil && os.IsNotExist(err){
 		t.Fatal(err)
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试文件名模式为file.level
@@ -156,7 +162,8 @@ func TestLogModeCateLevel(t *testing.T) {
 	if err != nil && os.IsNotExist(err){
 		t.Fatal(err)
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试logFunCallDepth参数
@@ -177,7 +184,8 @@ func TestLogFunCallDepth(t *testing.T)  {
 	if !strings.Contains(string(line),"flog_test.go"){
 		t.Fatal("Get call func name failed, ",string(line))
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //测试异步输出Async
@@ -200,7 +208,8 @@ func TestLogFunCallDepth2(t *testing.T)  {
 	if !strings.Contains(string(line),"flog_test.go"){
 		t.Fatal("Get call func name failed, ",string(line))
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(filename)
+	//os.RemoveAll(loger.LogPath)
 }
 
 //压力测试写入
@@ -209,7 +218,8 @@ func BenchmarkFile(b *testing.B)  {
 	for i:=0;i<b.N;i++{
 		loger.Debug("ddd","bech test...")
 	}
-	os.RemoveAll(loger.LogPath)
+	os.Remove(path.Join(loger.LogPath, loger.FileName))
+	//os.RemoveAll(loger.LogPath)
 }
 
 //压力测试异步写入
@@ -220,5 +230,6 @@ func BenchmarkFileAsync(b *testing.B)  {
 		loger.Debug("ddd","bech test...")
 	}
 	//loger.Close()
-	os.RemoveAll(loger.LogPath)
+	os.Remove(path.Join(loger.LogPath, loger.FileName))
+	//os.RemoveAll(loger.LogPath)
 }
