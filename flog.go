@@ -87,29 +87,33 @@ func Date(format string, timestamp ...int64) string {
  * 文件日志
  */
 type Flog struct {
-	mu              sync.Mutex
-	Level           int                    //日志等级
-	LogMode         int                    //日志文件名模式
-										   //LogFlag         int    //日志内容模式
-	LogPath         string                 //日志文件的根目录
-	FileName        string                 //文件名
-	DateFormat      string                 //文件按格式化 YmdHis
-	LogFlags        []int                  //日志输出的格式以及顺序
-	LogFlagSeparator string 				//日志输出的分隔符
-	ArchiveName     string                 //归档目录 default:archive
-	LogFunCallDepth int                    //获取调用函数的层级
-										   /**
-											* 日志logger相关
-											*/
-	logerMap        map[string]*log.Logger //filename:log.Logger
-	fhMap           map[string]*os.File    //filename:os.File
-										   /**
-											* 异步写相关
-											*/
-	msgChan         chan *LogMsg           //日志chan
-	signalChan      chan string            //信号chan 包括flush 和 close
-	async           bool                   //是否开启异步
-	wg              sync.WaitGroup
+	mu               sync.Mutex
+	Level            int                    //日志等级
+	LogMode          int                    //日志文件名模式
+	LogPath          string                 //日志文件的根目录
+	FileName         string                 //文件名
+	DateFormat       string                 //文件按格式化 YmdHis
+	LogFlags         []int                  //日志输出的格式以及顺序
+	LogFlagSeparator string                 //日志输出的分隔符
+	ArchiveName      string                 //归档目录 default:archive
+	LogFunCallDepth  int                    //获取调用函数的层级
+											/**
+											 * 日志logger相关
+											 */
+	logerMap         map[string]*log.Logger //filename:log.Logger
+	fhMap            map[string]*os.File    //filename:os.File
+											/**
+											 * 异步写相关
+											 */
+	msgChan          chan *LogMsg           //日志chan
+	signalChan       chan string            //信号chan 包括flush 和 close
+	async            bool                   //是否开启异步
+	wg               sync.WaitGroup
+
+											/**
+											 * 日志切割和归档相关
+											 */
+	LogRotateSize    int                    //日志切割的文件大小最大值,单位KB
 }
 
 /**
@@ -156,6 +160,10 @@ func (this *Flog ) init() {
 
 	if len(this.LogFlags) == 0 {
 		this.LogFlags = []int{LF_DATETIME, LF_LONGFILE, LF_CATE, LF_LEVEL}
+	}
+
+	if this.LogRotateSize == 0 {
+		this.LogRotateSize = 100 << 10  //100M
 	}
 }
 
@@ -284,6 +292,7 @@ func (this *Flog ) log(category string, level int, v ...interface{}) {
 	}
 }
 
+//@todo 可能会出现多个人拿到同一个logger,但是某一个人拿到的时候执行了rotate导致其他人没法再写
 func (this *Flog ) writeMsg(msg *LogMsg) {
 	filename := this.getFilename(msg)
 	//fmt.Println(filename)
@@ -302,35 +311,35 @@ func (this *Flog ) formatMessage(msg *LogMsg) string {
 		file = "???"
 		line = 0
 	}
-	formatStr := make([]interface{},0)
-	for _,flag := range this.LogFlags{
+	formatStr := make([]interface{}, 0)
+	for _, flag := range this.LogFlags {
 		switch flag {
 		case LF_DATETIME:
-			formatStr = append(formatStr,msg.logTime.Format("2006-01-02 15:04:05"))
+			formatStr = append(formatStr, msg.logTime.Format("2006-01-02 15:04:05"))
 		case LF_LEVEL:
-			formatStr = append(formatStr,strings.ToUpper(this.getLevelName(msg.level)))
+			formatStr = append(formatStr, strings.ToUpper(this.getLevelName(msg.level)))
 		case LF_CATE:
-			formatStr = append(formatStr,msg.category)
+			formatStr = append(formatStr, msg.category)
 		case LF_LONGFILE:
-			formatStr = append(formatStr,file + ":"+strconv.Itoa(line))
+			formatStr = append(formatStr, file + ":" + strconv.Itoa(line))
 		case LF_SHORTFILE:
 			short := file
 			for i := len(file) - 1; i > 0; i-- {
 				if file[i] == '/' {
-					short = file[i+1:]
+					short = file[i + 1:]
 					break
 				}
 			}
-			formatStr = append(formatStr,short + ":"+strconv.Itoa(line))
+			formatStr = append(formatStr, short + ":" + strconv.Itoa(line))
 		}
 	}
-	formatStr = append(formatStr,msg.message)
+	formatStr = append(formatStr, msg.message)
 
-	if len(this.LogFlagSeparator) == 0{
+	if len(this.LogFlagSeparator) == 0 {
 		this.LogFlagSeparator = " "
 	}
 
-	s := strings.TrimPrefix(strings.Repeat(this.LogFlagSeparator+"%s",len(formatStr)),this.LogFlagSeparator)
+	s := strings.TrimPrefix(strings.Repeat(this.LogFlagSeparator + "%s", len(formatStr)), this.LogFlagSeparator)
 	return fmt.Sprintf(s, formatStr...)
 }
 
@@ -384,9 +393,60 @@ func (this *Flog ) getLogger(filename string) (*log.Logger, error) {
 		}
 		this.fhMap[filename] = fh
 		this.logerMap[filename] = log.New(fh, "", 0)
+	}else {
+		err := this.rotate(fh)
+		if err != nil {
+			return nil, err
+		}
 	}
 	//@todo check logger exist
 	logger := this.logerMap[filename]
 	return logger, nil
+
+}
+
+//执行切割
+func (this *Flog ) rotate(file *os.File) error {
+	//如果不需要切割
+	if !this.needRotate(file) {
+		return nil
+	}
+	//先关闭
+	err := file.Close()
+	if err != nil {
+		return err
+	}
+	filePath := file.Name()
+	_, filename := path.Split(filePath)
+	//再重命名
+	newPath := filePath + "." + Date("His")
+	err = os.Rename(filePath, newPath)
+	if err != nil {
+		return err
+	}
+	//再生成新的logger和fh
+	fh, err := os.OpenFile(filePath, os.O_RDWR | os.O_APPEND | os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	//替换旧的
+	this.fhMap[filename] = fh
+	this.logerMap[filename] = log.New(fh, "", 0)
+	return nil
+}
+
+//是否需要切割日志
+func (this *Flog ) needRotate(file *os.File) bool {
+	//获取文件的大小
+	info, err := file.Stat()
+	if err != nil {
+		log.Println("get file stat err,", file.Name(), err)
+		return false
+	}
+	if info.Size() >= int64(this.LogRotateSize << 10) {
+		return true
+	}
+
+	return false
 
 }
