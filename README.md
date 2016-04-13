@@ -85,10 +85,11 @@ func main()  {
 
 ### 设置日志文件名模式
 属性LogMode用来指定文件名模式,目前支持四种文件名
-1. LOGMODE_FILE eg. app.log
-2. LOGMODE_FILE_LEVEL eg. app.log.debug
-3. LOGMODE_CATE eg. test test为下例中Debug的第一个参数
-4. LOGMODE_CATE_LEVEL eg. test.debug  
+
+- LOGMODE_FILE eg. app.log
+- LOGMODE_FILE_LEVEL eg. app.log.debug
+- LOGMODE_CATE eg. test test为下例中Debug的第一个参数
+- LOGMODE_CATE_LEVEL eg. test.debug
 
 ```
 ....
