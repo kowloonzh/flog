@@ -60,6 +60,9 @@ var TimeFormatMap = map[string]string{
 	"H":"15",
 	"i":"04",
 	"s":"05",
+	"h":"05.000", //毫秒
+	"w":"05.000000", //微秒
+	"n":"05.000000000", //纳秒
 }
 
 /**
@@ -81,6 +84,13 @@ func Date(format string, timestamp ...int64) string {
 		tm = time.Now()
 	}
 	return tm.Format(newFormat)
+}
+
+// 检查文件或目录是否存在
+// 如果由 filename 指定的文件或目录存在则返回 true，否则返回 false
+func FileExist(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil || os.IsExist(err)
 }
 
 /**
@@ -234,6 +244,11 @@ func (this *Flog ) Close() {
 	}else {
 		this.flush()
 	}
+	//for _,fh := range this.fhMap{
+	//	if fh!=nil{
+	//		fh.Close()
+	//	}
+	//}
 	this.fhMap = nil
 	this.logerMap = nil
 }
@@ -294,11 +309,13 @@ func (this *Flog ) log(category string, level int, v ...interface{}) {
 
 //@todo 可能会出现多个人拿到同一个logger,但是某一个人拿到的时候执行了rotate导致其他人没法再写
 func (this *Flog ) writeMsg(msg *LogMsg) {
+	this.mu.Lock()
+	defer this.mu.Unlock()
 	filename := this.getFilename(msg)
 	//fmt.Println(filename)
 	logger, err := this.getLogger(filename)
 	if err != nil {
-		fmt.Println("Error: fail to get logger by filename", filename)
+		fmt.Println("Error: fail to get logger by filename", filename, err)
 		return
 	}
 	logger.Print(msg.formatMsg)
@@ -378,8 +395,8 @@ func (this *Flog ) getLogger(filename string) (*log.Logger, error) {
 	os.MkdirAll(this.LogPath, os.ModePerm)
 	filePath := path.Join(this.LogPath, filename)
 
-	this.mu.Lock()
-	defer this.mu.Unlock()
+	//this.mu.Lock()
+	//defer this.mu.Unlock()
 
 	//先去fhMap里面查看
 	fh, ok := this.fhMap[filename]
@@ -387,12 +404,10 @@ func (this *Flog ) getLogger(filename string) (*log.Logger, error) {
 		if fh != nil {
 			fh.Close()
 		}
-		fh, err := os.OpenFile(filePath, os.O_RDWR | os.O_APPEND | os.O_CREATE, os.ModePerm)
+		err := this.createFileHandleAndFlogger(filename, filePath)
 		if err != nil {
 			return nil, err
 		}
-		this.fhMap[filename] = fh
-		this.logerMap[filename] = log.New(fh, "", 0)
 	}else {
 		err := this.rotate(fh)
 		if err != nil {
@@ -419,20 +434,15 @@ func (this *Flog ) rotate(file *os.File) error {
 	filePath := file.Name()
 	_, filename := path.Split(filePath)
 	//再重命名
-	newPath := filePath + "." + Date("His")
-	err = os.Rename(filePath, newPath)
-	if err != nil {
-		return err
+	newPath := filePath + "." + Date("Hin")
+	//再次判断是否存在,防止多个进程同时操作一个文件
+	if !FileExist(filePath){
+		//创建新的
+		return this.createFileHandleAndFlogger(filename,filePath)
 	}
-	//再生成新的logger和fh
-	fh, err := os.OpenFile(filePath, os.O_RDWR | os.O_APPEND | os.O_CREATE, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	//替换旧的
-	this.fhMap[filename] = fh
-	this.logerMap[filename] = log.New(fh, "", 0)
-	return nil
+	os.Rename(filePath, newPath)
+	//创建新的
+	return this.createFileHandleAndFlogger(filename,filePath)
 }
 
 //是否需要切割日志
@@ -449,4 +459,16 @@ func (this *Flog ) needRotate(file *os.File) bool {
 
 	return false
 
+}
+
+//创建一个file句柄和Flogger
+func (this *Flog ) createFileHandleAndFlogger(filename, filePath string) error {
+	//再生成新的logger和fh
+	fh, err := os.OpenFile(filePath, os.O_RDWR | os.O_APPEND | os.O_CREATE, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	this.fhMap[filename] = fh
+	this.logerMap[filename] = log.New(fh, "", 0)
+	return nil
 }

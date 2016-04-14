@@ -157,7 +157,7 @@ func main()  {
 	loger := flog.New("/data/logs")
 
     //设置日志内容以及顺序为 等级 分类 时间
-	loger.LogFlags = []int{LF_LEVEL,LF_CATE,LF_DATETIME}
+	loger.LogFlags = []int{flog.LF_LEVEL,flog.LF_CATE,flog.LF_DATETIME}
 	//设置日志内容的分隔符为 " | "
     loger.LogFlagSeparator = " | "
 
