@@ -167,3 +167,16 @@ func main()  {
 ```
 
 ### @todo 归档和日志切割
+
+```
+....
+func main()  {
+	loger := flog.New("/data/logs")
+
+    //设置切割日志的大小,单位KB
+    loger.LogRotateSize = 10*1024
+
+    loger.Debug("d", "debug_message")
+
+}
+```
