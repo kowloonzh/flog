@@ -166,7 +166,7 @@ func main()  {
 }
 ```
 
-### @todo 归档和日志切割
+### 日志切割
 
 ```
 ....
@@ -174,7 +174,35 @@ func main()  {
 	loger := flog.New("/data/logs")
 
     //设置切割日志的大小,单位KB
-    loger.LogRotateSize = 10*1024
+    loger.LogRotateSize = 10*1024  //10MB
+
+    loger.Debug("d", "debug_message")
+
+}
+```
+
+### 归档
+归档涉及三个参数
+NeedArchive  是否需要归档,默认为false
+ArchivePath  归档目录,默认为archive,表示LogPath目录下的archive目录
+LogKeepDay   日志保留的天数,默认为7天
+
+> 考虑到性能问题,归档采用的是goroutine的方式调用,测试的时候可能会出现主线程先退出,归档未完成的情况,可以在主程序中加time.Sleep()来查看归档效果
+
+
+```
+....
+func main()  {
+	loger := flog.New("/data/logs")
+
+    //开启归档功能
+    loger.NeedArchive = true
+
+    //设置归档目录
+    loger.ArchivePath = "archive"
+
+    //设置归档日志保留的天数
+    loger.LogKeepDay = 30
 
     loger.Debug("d", "debug_message")
 

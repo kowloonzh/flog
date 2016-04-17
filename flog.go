@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"io/ioutil"
+	"path/filepath"
 )
 
 const (
@@ -86,6 +88,16 @@ func Date(format string, timestamp ...int64) string {
 	return tm.Format(newFormat)
 }
 
+func Strtotime(datetime string, format string) int64 {
+	newFormat := format
+	for k, v := range TimeFormatMap {
+		newFormat = strings.Replace(newFormat, k, v, 1)
+	}
+	local, _ := time.LoadLocation("Local")
+	theTime, _ := time.ParseInLocation(newFormat, datetime, local)
+	return theTime.Unix()
+}
+
 // 检查文件或目录是否存在
 // 如果由 filename 指定的文件或目录存在则返回 true，否则返回 false
 func FileExist(filename string) bool {
@@ -105,7 +117,6 @@ type Flog struct {
 	DateFormat       string                 //文件按格式化 YmdHis
 	LogFlags         []int                  //日志输出的格式以及顺序
 	LogFlagSeparator string                 //日志输出的分隔符
-	ArchiveName      string                 //归档目录 default:archive
 	LogFunCallDepth  int                    //获取调用函数的层级
 											/**
 											 * 日志logger相关
@@ -124,6 +135,9 @@ type Flog struct {
 											 * 日志切割和归档相关
 											 */
 	LogRotateSize    int                    //日志切割的文件大小最大值,单位KB
+	NeedArchive      bool                   //是否需要归档
+	ArchivePath      string                 //归档目录 default:archive
+	LogKeepDay       int                    //归档日志保留天数,默认7天
 }
 
 /**
@@ -152,8 +166,8 @@ func (this *Flog ) init() {
 		this.LogPath = "logs"
 	}
 
-	if len(this.ArchiveName) == 0 {
-		this.ArchiveName = "archive"
+	if len(this.ArchivePath) == 0 {
+		this.ArchivePath = "archive"
 	}
 
 	if len(this.FileName) == 0 {
@@ -174,6 +188,10 @@ func (this *Flog ) init() {
 
 	if this.LogRotateSize == 0 {
 		this.LogRotateSize = 100 << 10  //100M
+	}
+
+	if this.LogKeepDay == 0 {
+		this.LogKeepDay = 7        //7 天
 	}
 }
 
@@ -244,11 +262,6 @@ func (this *Flog ) Close() {
 	}else {
 		this.flush()
 	}
-	//for _,fh := range this.fhMap{
-	//	if fh!=nil{
-	//		fh.Close()
-	//	}
-	//}
 	this.fhMap = nil
 	this.logerMap = nil
 }
@@ -307,7 +320,7 @@ func (this *Flog ) log(category string, level int, v ...interface{}) {
 	}
 }
 
-//@todo 可能会出现多个人拿到同一个logger,但是某一个人拿到的时候执行了rotate导致其他人没法再写
+//执行日志写入
 func (this *Flog ) writeMsg(msg *LogMsg) {
 	this.mu.Lock()
 	defer this.mu.Unlock()
@@ -319,6 +332,12 @@ func (this *Flog ) writeMsg(msg *LogMsg) {
 		return
 	}
 	logger.Print(msg.formatMsg)
+
+	//异步归档
+	if this.NeedArchive {
+		//实现归档
+		go this.doArchive()
+	}
 }
 
 //格式化消息 日期 文件位置 等级 类别 消息
@@ -436,13 +455,13 @@ func (this *Flog ) rotate(file *os.File) error {
 	//再重命名
 	newPath := filePath + "." + Date("Hin")
 	//再次判断是否存在,防止多个进程同时操作一个文件
-	if !FileExist(filePath){
+	if !FileExist(filePath) {
 		//创建新的
-		return this.createFileHandleAndFlogger(filename,filePath)
+		return this.createFileHandleAndFlogger(filename, filePath)
 	}
 	os.Rename(filePath, newPath)
 	//创建新的
-	return this.createFileHandleAndFlogger(filename,filePath)
+	return this.createFileHandleAndFlogger(filename, filePath)
 }
 
 //是否需要切割日志
@@ -471,4 +490,76 @@ func (this *Flog ) createFileHandleAndFlogger(filename, filePath string) error {
 	this.fhMap[filename] = fh
 	this.logerMap[filename] = log.New(fh, "", 0)
 	return nil
+}
+
+//归档
+func (this *Flog ) doArchive() {
+	//遍历日志目录
+	files, err := ioutil.ReadDir(this.LogPath)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	if len(files) == 0 {
+		return
+	}
+
+	if len(this.ArchivePath) == 0 {
+		return
+	}
+
+	var archiveDir string
+
+	if filepath.IsAbs(this.ArchivePath) {
+		archiveDir = this.ArchivePath
+	}else {
+		archiveDir = path.Join(this.LogPath, this.ArchivePath)
+	}
+
+	os.MkdirAll(archiveDir, os.ModePerm)
+
+	//获取今天凌晨的日期时间戳
+	td := Strtotime(Date("Ymd"), "Ymd")
+
+	for _, f := range files {
+		//如果是目录,不用管他
+		if f.IsDir() {
+			continue
+		}
+		//如果是文件,判断modtime是否为前一天的日期,并移动到archive目录里
+		if td > f.ModTime().Unix() {
+			os.Rename(path.Join(this.LogPath, f.Name()), path.Join(archiveDir, f.Name()))
+		}
+	}
+	
+	//清理日志文件
+	go this.delLogFiles(archiveDir)
+}
+
+//删除日志文件
+func (this *Flog ) delLogFiles(archiveDir string) {
+
+	//遍历archive目录
+	files, err := ioutil.ReadDir(archiveDir)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	//保留的时间戳
+	keepSec := int64(this.LogKeepDay * 24 * 60 * 60)
+
+	//获取今天凌晨的日期时间戳
+	td := Strtotime(Date("Ymd"), "Ymd")
+	if len(files) > 0 {
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			//如果超过保留的天数,直接删除
+			if td - f.ModTime().Unix() > keepSec {
+				os.Remove(path.Join(archiveDir, f.Name()))
+			}
+		}
+	}
 }
