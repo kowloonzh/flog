@@ -466,8 +466,8 @@ func (this *Flog ) rotate(file *os.File) error {
 
 //是否需要切割日志
 func (this *Flog ) needRotate(file *os.File) bool {
-	//如果日志切割大小为0 则不切割
-	if this.LogRotateSize == 0 {
+	//如果日志切割大小为-1 则不切割
+	if this.LogRotateSize <= 0 {
 		return false
 	}
 
@@ -543,8 +543,8 @@ func (this *Flog ) doArchive() {
 
 //删除日志文件
 func (this *Flog ) delLogFiles(archiveDir string) {
-	//keepDay设置为0 则不删除文件
-	if this.LogKeepDay == 0 {
+	//keepDay设置为-1 则不删除文件
+	if this.LogKeepDay <= 0 {
 		return
 	}
 
