@@ -466,6 +466,11 @@ func (this *Flog ) rotate(file *os.File) error {
 
 //是否需要切割日志
 func (this *Flog ) needRotate(file *os.File) bool {
+	//如果日志切割大小为0 则不切割
+	if this.LogRotateSize == 0 {
+		return false
+	}
+
 	//获取文件的大小
 	info, err := file.Stat()
 	if err != nil {
@@ -477,7 +482,6 @@ func (this *Flog ) needRotate(file *os.File) bool {
 	}
 
 	return false
-
 }
 
 //创建一个file句柄和Flogger
@@ -532,13 +536,17 @@ func (this *Flog ) doArchive() {
 			os.Rename(path.Join(this.LogPath, f.Name()), path.Join(archiveDir, f.Name()))
 		}
 	}
-	
+
 	//清理日志文件
 	go this.delLogFiles(archiveDir)
 }
 
 //删除日志文件
 func (this *Flog ) delLogFiles(archiveDir string) {
+	//keepDay设置为0 则不删除文件
+	if this.LogKeepDay == 0 {
+		return
+	}
 
 	//遍历archive目录
 	files, err := ioutil.ReadDir(archiveDir)
@@ -546,6 +554,7 @@ func (this *Flog ) delLogFiles(archiveDir string) {
 		log.Println(err)
 		return
 	}
+
 	//保留的时间戳
 	keepSec := int64(this.LogKeepDay * 24 * 60 * 60)
 
