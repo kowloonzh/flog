@@ -542,7 +542,13 @@ func (this *Flog ) doArchive() {
 		}
 		//如果是文件,判断modtime是否为前一天的日期,并移动到archive目录里
 		if td > f.ModTime().Unix() {
-			os.Rename(path.Join(this.LogPath, f.Name()), path.Join(archiveDir, f.Name()))
+			newName := path.Join(archiveDir, f.Name())
+			//如果日志没有带日期,则归档时,自动带上日期
+			if this.DateFormat == "" {
+				newName = newName + "." + Date("Ymd", f.ModTime().Unix())
+			}
+
+			os.Rename(path.Join(this.LogPath, f.Name()), newName)
 		}
 	}
 

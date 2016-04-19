@@ -277,31 +277,51 @@ func TestArchive(t *testing.T) {
 	loger.NeedArchive = true
 	loger.ArchivePath = "archive"
 
+	twoDayAgo := time.Now().Unix() - (2 * 24 * 60 * 60)
 	//创建一个前天的日志文件在logPath下
-	bDay := Date("YmdHi", time.Now().Unix() - (2 * 24 * 60 * 60))
+	bDay := Date("YmdHi", twoDayAgo)
 	exec.Command("/bin/bash", "-c", "touch -t  " + bDay + " " + path.Join(loger.LogPath, "mtime.log")).Run()
 
 	loger.Debug("d", "debug_message")
 
 	time.Sleep(1 * time.Second)
 
+	archiveName := "mtime.log" + "." + Date("Ymd", twoDayAgo)
+
 	//文件归档到归档目录下
-	if !FileExist(path.Join(loger.LogPath, loger.ArchivePath, "mtime.log")) {
+	if !FileExist(path.Join(loger.LogPath, loger.ArchivePath, archiveName)) {
 		t.Fatalf("Fail to move file %s to archive directory", "mtime.log")
 	}
 
+	os.Remove(path.Join(loger.LogPath, loger.ArchivePath, archiveName))
+	os.Remove(path.Join(loger.LogPath, "mtime.log"))
+	os.Remove(path.Join(loger.LogPath, loger.FileName))
+
+}
+
+func TestArchive2(t *testing.T) {
+	loger := New()
+	loger.NeedArchive = true
+	loger.ArchivePath = "archive"
 	//日志只保留一天的
 	loger.LogKeepDay = 1
+	loger.DateFormat = "Ymd"
+
+	twoDayAgo := time.Now().Unix() - (2 * 24 * 60 * 60)
+	//创建一个前天的日志文件在logPath下
+	bDay := Date("YmdHi", twoDayAgo)
+	exec.Command("/bin/bash", "-c", "touch -t  " + bDay + " " + path.Join(loger.LogPath, "mtime2.log")).Run()
+
 	loger.Debug("d", "debug_message")
 	time.Sleep(1 * time.Second)
 	//删除归档目录下的文件
-	if FileExist(path.Join(loger.LogPath, loger.ArchivePath, "mtime.log")) {
-		t.Fatalf("Fail to delete file %s from archive directory", "mtime.log")
+	if FileExist(path.Join(loger.LogPath, loger.ArchivePath, "mtime2.log")) {
+		t.Fatalf("Fail to delete file %s from archive directory", "mtime2.log")
 	}
 
-	os.Remove(path.Join(loger.LogPath, loger.ArchivePath, "mtime.log"))
-	os.Remove(path.Join(loger.LogPath, "mtime.log"))
-	os.Remove(path.Join(loger.LogPath, loger.FileName))
+	os.Remove(path.Join(loger.LogPath, loger.ArchivePath, "mtime2.log"))
+	os.Remove(path.Join(loger.LogPath, "mtime2.log"))
+	os.Remove(path.Join(loger.LogPath, loger.FileName + "." + Date("Ymd")))
 
 }
 
