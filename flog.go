@@ -138,6 +138,7 @@ type Flog struct {
 	NeedArchive      bool                   //是否需要归档
 	ArchivePath      string                 //归档目录 default:archive
 	LogKeepDay       int                    //归档日志保留天数,默认7天
+	lastArchiveDay   string                 //上次清理的日期
 }
 
 /**
@@ -498,6 +499,7 @@ func (this *Flog ) createFileHandleAndFlogger(filename, filePath string) error {
 
 //归档
 func (this *Flog ) doArchive() {
+
 	//遍历日志目录
 	files, err := ioutil.ReadDir(this.LogPath)
 	if err != nil {
@@ -512,6 +514,13 @@ func (this *Flog ) doArchive() {
 	if len(this.ArchivePath) == 0 {
 		return
 	}
+
+	//如果今天已经归档过则不需要再归档
+	today := Date("Ymd")
+	if this.lastArchiveDay == today {
+		return
+	}
+	this.lastArchiveDay = today
 
 	var archiveDir string
 
