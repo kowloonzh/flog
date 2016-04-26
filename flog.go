@@ -139,6 +139,8 @@ type Flog struct {
 	ArchivePath      string                 //归档目录 default:archive
 	LogKeepDay       int                    //归档日志保留天数,默认7天
 	lastArchiveDay   string                 //上次清理的日期
+
+	OpenConsoleLog   bool                   //是否打印在控制台
 }
 
 /**
@@ -313,6 +315,11 @@ func (this *Flog ) log(category string, level int, v ...interface{}) {
 	}
 	//格式化message
 	msg.formatMsg = this.formatMessage(msg)
+
+	if this.OpenConsoleLog {
+		this.write2console(msg)
+	}
+
 	//如果是异步,先写入msgChan
 	if this.async {
 		this.msgChan <- msg
@@ -339,6 +346,20 @@ func (this *Flog ) writeMsg(msg *LogMsg) {
 		//实现归档
 		go this.doArchive()
 	}
+}
+
+//日志同步写到控制台
+func (this *Flog ) write2console(msg *LogMsg) {
+	var code string
+	if msg.level == LEVEL_ERROR {
+		code = "\033[31m"
+	}else if msg.level == LEVEL_WARNING {
+		code = "\033[33m"
+	}else if msg.level == LEVEL_INFO {
+		code = "\033[32m"
+	}
+	logStr := "\033[0m" + code + msg.formatMsg + "\033[0m"
+	log.Println(logStr)
 }
 
 //格式化消息 日期 文件位置 等级 类别 消息

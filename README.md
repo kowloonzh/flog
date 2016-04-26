@@ -166,6 +166,21 @@ func main()  {
 }
 ```
 
+### 命令行日志
+
+```
+	loger := flog.New("/data/logs")
+
+    //设置命令行同步输出日志,默认为false,不同级别会输出不同的颜色
+    loger.OpenConsoleLog = true
+
+    loger.Debug("d", "debug_message")
+    loger.Info("i", "info_message")
+    loger.Warning("w", "warning_message")
+    loger.Error("e", "error_message")
+
+```
+
 ### 日志切割
 
 ```
