@@ -336,46 +336,46 @@ func BenchmarkFile(b *testing.B) {
 }
 
 //压力测试按类别分文件写入
-func BenchmarkFileCates(b *testing.B) {
-	loger := New()
-	loger.LogMode = LOGMODE_CATE
-	loger.LogRotateSize = 1
-	for i := 0; i < b.N; i++ {
-		loger.Debug("ddd", "bech test...")
-		loger.Debug("ddd2", "bech test...")
-		loger.Debug("ddd3", "bech test...")
-		loger.Debug("ddd4", "bech test...")
-	}
-	exec.Command("/bin/bash", "-c", "rm -f " + path.Join(loger.LogPath, "ddd*")).Run()
-	//os.RemoveAll(loger.LogPath)
-}
+//func BenchmarkFileCates(b *testing.B) {
+//	loger := New()
+//	loger.LogMode = LOGMODE_CATE
+//	loger.LogRotateSize = 1
+//	for i := 0; i < b.N; i++ {
+//		loger.Debug("ddd", "bech test...")
+//		loger.Debug("ddd2", "bech test...")
+//		loger.Debug("ddd3", "bech test...")
+//		loger.Debug("ddd4", "bech test...")
+//	}
+//	exec.Command("/bin/bash", "-c", "rm -f " + path.Join(loger.LogPath, "ddd*")).Run()
+//	//os.RemoveAll(loger.LogPath)
+//}
 
 //压力测试异步写入
-func BenchmarkFileAsync(b *testing.B) {
-	loger := New()
-	loger.SetAsync(0)
-	for i := 0; i < b.N; i++ {
-		loger.Debug("ddd", "bech test...")
-	}
-	loger.Close()
-	os.Remove(path.Join(loger.LogPath, loger.FileName))
-	//os.RemoveAll(loger.LogPath)
-}
+//func BenchmarkFileAsync(b *testing.B) {
+//	loger := New()
+//	loger.SetAsync(0)
+//	for i := 0; i < b.N; i++ {
+//		loger.Debug("ddd", "bech test...")
+//	}
+//	loger.Close()
+//	os.Remove(path.Join(loger.LogPath, loger.FileName))
+//	//os.RemoveAll(loger.LogPath)
+//}
 
 //压力测试异步写入
-func BenchmarkFileCatesAsync(b *testing.B) {
-	loger := New()
-	loger.SetAsync(0)
-	loger.LogMode = LOGMODE_CATE
-	loger.LogRotateSize = 1 << 10
-	for i := 0; i < b.N; i++ {
-		loger.Debug("ddd", "bech test...")
-		loger.Debug("ddd2", "bech test...")
-		loger.Debug("ddd3", "bech test...")
-		loger.Debug("ddd4", "bech test...")
-	}
-	loger.Close()
-	exec.Command("/bin/bash", "-c", "rm -f " + path.Join(loger.LogPath, "ddd*")).Run()
-	//os.Remove(path.Join(loger.LogPath, loger.FileName))
-	//os.RemoveAll(loger.LogPath)
-}
+//func BenchmarkFileCatesAsync(b *testing.B) {
+//	loger := New()
+//	loger.SetAsync(0)
+//	loger.LogMode = LOGMODE_CATE
+//	loger.LogRotateSize = 1 << 10
+//	for i := 0; i < b.N; i++ {
+//		loger.Debug("ddd", "bech test...")
+//		loger.Debug("ddd2", "bech test...")
+//		loger.Debug("ddd3", "bech test...")
+//		loger.Debug("ddd4", "bech test...")
+//	}
+//	loger.Close()
+//	exec.Command("/bin/bash", "-c", "rm -f " + path.Join(loger.LogPath, "ddd*")).Run()
+//	//os.Remove(path.Join(loger.LogPath, loger.FileName))
+//	//os.RemoveAll(loger.LogPath)
+//}
